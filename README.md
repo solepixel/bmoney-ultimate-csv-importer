@@ -41,9 +41,11 @@ Filters:
 
 
 changelog:
-2.2
-	- Add cron and "remember last import" support
-2.0 
-	- Added support for users
-1.0
-	- Initial build
+* 2.3
+	* Added Unique field support - still needs work
+* 2.2
+	* Add cron and "remember last import" support
+* 2.0
+	* Added support for users
+* 1.0
+	* Initial build
