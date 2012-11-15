@@ -41,6 +41,9 @@ Filters:
 
 
 changelog:
+* 2.4
+	* Cleaned up some of the unique field code.
+	* Added support for incremental imports
 * 2.3
 	* Added Unique field support - still needs work
 * 2.2

@@ -4,6 +4,7 @@
 	<h3>Schedule Import</h3>
 	<ul class="schedule-options">
 		<li><label><input type="radio" name="bmuci_schedule" value="now"<?php if($schedule == 'now') echo ' checked="checked"'; ?> /> Import Now!</label></li>
+		<li><label><input type="radio" name="bmuci_schedule" value="incremental"<?php if($schedule == 'incremental') echo ' checked="checked"'; ?> /> Import Now, but in increments of</label> <input type="text" name="bmuci_increment" value="<?php echo $this->increment; ?>"/></li>
 		<li><label><input type="radio" name="bmuci_schedule" value="manual"<?php if($schedule == 'manual') echo ' checked="checked"'; ?> /> Save my settings and I'll manually run the import. (handy for cron tasks already scheduled)</label></li>
 		<li><label><input type="radio" name="bmuci_schedule" value="datetime"<?php if($schedule == 'datetime') echo ' checked="checked"'; ?> /> Specific Date/Time</label>
 			<label class="datetime_input">Enter Date/Time:

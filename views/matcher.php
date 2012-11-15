@@ -15,6 +15,7 @@ $rows = $data['rows'];
 			<th class="sample-data">Sample Data</th>
 			<th class="post-id">Post ID</th>
 			<th class="unique">Unique</th>
+			<th class="serialize">Serialize</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -38,6 +39,7 @@ $rows = $data['rows'];
 				<td class="sample-data"><span class="samples"><?php echo $sample; ?></span></td>
 				<td class="post-id"><input type="radio" name="bmuci_id" value="<?php echo $heading; ?>"<?php if($this->post_id == $heading) echo ' checked="checked"'; ?> /></td>
 				<td class="unique"><input type="radio" name="bmuci_unique" value="<?php echo $heading; ?>"<?php if($this->unique == $heading) echo ' checked="checked"'; ?> /></td>
+				<td class="serialize"><input type="checkbox" name="bmuci_serialize[]" value="<?php echo $heading; ?>"<?php if(in_array($heading, $this->serialized)) echo ' checked="checked"'; ?> /></td>
 			</tr>
 			<?php $even = !$even;
 			$found = false;

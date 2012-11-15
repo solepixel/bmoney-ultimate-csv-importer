@@ -14,8 +14,14 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		public $post_id = NULL;
 		public $unique = NULL;
 		public $unique_key = NULL;
+		public $serialized = array();
+		public $serialized_keys = array();
 		public $last_import = 0;
 		public $defaults = array();
+		
+		public $increment = NULL;
+		public $start = NULL;
+		public $end = NULL;
 		
 		public $customization_methods = array();
 		
@@ -125,6 +131,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				$this->multisite	= isset($_POST['bmuci_multisite']) ? $_POST['bmuci_multisite'] : array();
 				$this->post_id		= isset($_POST['bmuci_id']) ? $_POST['bmuci_id'] : NULL;
 				$this->unique		= isset($_POST['bmuci_unique']) ? $_POST['bmuci_unique'] : NULL;
+				$this->serialized	= isset($_POST['bmuci_serialize']) ? $_POST['bmuci_serialize'] : array();
+				$this->increment	= isset($_POST['bmuci_increment']) ? $_POST['bmuci_increment'] : $this->increment;
 				
 				$custom_columns = isset($_POST['custom_columns']) ? $_POST['custom_columns'] : array();
 				
@@ -158,6 +166,10 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 					if($this->failed_imports){
 						$this->errors[] = $this->failed_imports.' records weren\'t imported because of missing required fields.';
 					}
+				} elseif($schedule == 'incremental'){
+					$when = 'now + 1 minute';
+					$processed = 'success';
+					$success_message = 'Your import will start momentarily.';
 				} else {
 					$processed = 'success';
 					$success_message = 'Your import has been successfully scheduled.';
@@ -170,6 +182,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				update_option(BMUCI_OPT_PREFIX.'multisite', $this->multisite);
 				update_option(BMUCI_OPT_PREFIX.'post_id', $this->post_id);
 				update_option(BMUCI_OPT_PREFIX.'unique', $this->unique);
+				update_option(BMUCI_OPT_PREFIX.'serialized', $this->serialized);
+				update_option(BMUCI_OPT_PREFIX.'increment', $this->increment);
 				update_option(BMUCI_OPT_PREFIX.'matched', $matched);
 				
 				if($schedule != 'now'){
@@ -177,7 +191,11 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				}
 				
 				if($when){
-					wp_schedule_single_event(strtotime($when), BMUCI_OPT_PREFIX.'scheduled_import');
+					if($this->increment){
+						wp_schedule_event(strtotime($when), 'hourly', BMUCI_OPT_PREFIX.'scheduled_import');
+					} else {
+						wp_schedule_single_event(strtotime($when), BMUCI_OPT_PREFIX.'scheduled_import');
+					}
 				}
 				
 				unset($csv);
@@ -202,6 +220,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			$this->defaults		= get_option(BMUCI_OPT_PREFIX.'defaults');
 			$this->post_id		= get_option(BMUCI_OPT_PREFIX.'post_id');
 			$this->unique		= get_option(BMUCI_OPT_PREFIX.'unique');
+			$this->serialized	= get_option(BMUCI_OPT_PREFIX.'serialized');
+			$this->increment	= get_option(BMUCI_OPT_PREFIX.'increment');
 		}
 		
 		/**
@@ -210,23 +230,52 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		 * @return void
 		 */
 		function _cron_import(){
-			$scheduled_cron = get_option(BMUCI_OPT_PREFIX.'scheduled');
-			if(strtotime($scheduled_cron) !== false){
-				if(date('Y-m-d H:i:s') >= date('Y-m-d H:i:s', strtotime($scheduled_cron))){
-					$this->setup_vars();
-					
-					$matched = get_option(BMUCI_OPT_PREFIX.'matched');
-					$csv = get_option(BMUCI_OPT_PREFIX.'csv');
-					
-					if($matched){
-						$data = $this->_parse_csv($csv);
-						$this->results = $this->_do_import($matched, $data);
-						update_option(BMUCI_OPT_PREFIX.'csv', '');
-						unset($csv);
+			
+			$cron_log = 'Starting cron at '.date('Y-m-d H:i:s').'<br />';
+			$this->setup_vars();
+			
+			$matched = get_option(BMUCI_OPT_PREFIX.'matched');
+			$csv = get_option(BMUCI_OPT_PREFIX.'csv');
+			
+			if($csv && $matched){
+				$data = $this->_parse_csv($csv);
+				$cron_log .= 'Import data loaded.<br />';
+				$last = get_option(BMUCI_OPT_PREFIX.'increment_last');
+				if($last && $last >= $this->total_rows){
+					$cron_log .= 'Incremental import complete.<br />';
+					$this->_update_cron_log($cron_log);
+					return;
+				}
+				$cron_log .= 'Starting import.<br />';
+				$this->results = $this->_do_import($matched, $data);
+				$cron_log .= 'Import ended.<br />';
+				if($this->increment){
+					$last = get_option(BMUCI_OPT_PREFIX.'increment_last');
+					$cron_log .= 'Incremental Import ended at '.$last.' of '.$this->total_rows.' total records.<br />';
+					if($last < $this->total_rows){
+						$cron_log .= 'Scheduling the cron again to complete the job.<br />';
+						wp_schedule_event(strtotime('now + 1 minute'), 'hourly', BMUCI_OPT_PREFIX.'scheduled_import');
+					} else {
+						$cron_log .= 'Incremental import complete.<br />';
+						$this->increment = false;
+						wp_unschedule_event($scheduled_cron, BMUCI_OPT_PREFIX.'scheduled_import');
 					}
 				}
+				
+				if(!$this->increment){
+					$cron_log .= 'Resetting CSV option value.<br />';
+					update_option(BMUCI_OPT_PREFIX.'csv', '');
+				}
+				unset($csv);
 			}
+			
+			$cron_log .= 'Cron Finished.';
+			$this->_update_cron_log($cron_log);
 			exit();
+		}
+		
+		function _update_cron_log($cron_log=''){
+			update_option(BMUCI_OPT_PREFIX.'cron_log', $cron_log);
 		}
 		
 		/**
@@ -255,6 +304,16 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			return $val;
 		}
 		
+		function _get_time($string=true){
+			if($string){
+				$time = microtime();
+				$time = ltrim(substr($time, 0, strpos($time, ' ')), '0');
+				$time = date('Y-m-d H:i:s').$time;
+				return $time;
+			}
+			return microtime(true);
+		}
+		
 		/**
 		 * BM_Ultimate_CSV_Importer::_do_import()
 		 * 
@@ -263,6 +322,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		 * @return
 		 */
 		function _do_import($columns, $data=array()){
+			#$log = $this->_get_time().': Import Started.'."\n";
 			do_action('bmuci_before_import', $this);
 			
 			$headings = $data['headings'];
@@ -278,11 +338,23 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			
 			$counter = 0;
 			
+			#$log .= $this->_get_time().': Check last increment value.'."\n";
+			
+			if($this->increment){
+				$last = get_option(BMUCI_OPT_PREFIX.'increment_last');
+				if(!$last) $last = 0;
+				$this->start = $last+1;
+				$this->end = $this->start + $this->increment;
+			}
+			#$log .= $this->_get_time().': Starting Loop.'."\n";
+			
 			foreach($rows as $row){ // loop through each row in CSV
 				$import_data = array();
 				$import_meta = array();
 				
 				$counter++;
+				
+				if($this->start && $counter < $this->start) continue;
 				
 				# start with all default values
 				foreach($this->defaults as $col => $default){
@@ -290,6 +362,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 						$import_data[$col] = $default;
 					}
 				}
+				
+				#$log .= $this->_get_time().': Building Columns.'."\n";
 				
 				# setup custom columns
 				foreach($columns as $ref => $val){
@@ -304,6 +378,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 					}
 				}
 				
+				#$log .= $this->_get_time().': Matching Columns.'."\n";
+				
 				# loop through each column to match with database
 				foreach($row as $key => $value){
 					if(in_array($key, $columns) && ($value || $value === '0')){
@@ -316,6 +392,9 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 						if($key == $this->unique){
 							$this->unique_key = $column;
 						}
+						if(in_array($key, $this->serialized)){
+							$this->serialized_keys[$key] = $column;
+						}
 						if($table == 'posts' || $table == 'users'){
 							$import_data[$column] = trim($value);
 						} elseif($table == 'postmeta' || $table == 'usermeta'){
@@ -325,25 +404,30 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				}
 					
 				if(count($import_data) > 0){
+					#$log .= $this->_get_time().': Starting Insert.'."\n";
 					$user_role = $import_data['user_role']; // do this before any filters
 					
 					$original_import_data = $import_data;
 					$import_data = $this->_column_check($primary_table, $import_data);
 					
 					if($primary_table == 'posts'){
-						
+						#$log .= $this->_get_time().': Inserting post type.'."\n";
 						$import_data = apply_filters('bmuci_post_data', $import_data, $row);
 						
 						if($this->unique){
+							#$log .= $this->_get_time().': Unique enabled. Inserting or grabbing post ID.'."\n";
 							$post_id = $this->get_unique($import_data, $import_meta);
 						} else {
+							#$log .= $this->_get_time().': Insert post type now.'."\n";
 							// insert post first to get the ID
 							$post_id = wp_insert_post($import_data);
+							#$log .= $this->_get_time().': Insert post type done.'."\n";
 						}
 						
 						if(is_numeric($post_id)){
 							$imported_data = $row;
 							$import_meta = apply_filters('bmuci_post_meta', $import_meta, $post_id, $row);
+							#$log .= $this->_get_time().': Inserting post meta.'."\n";
 							
 							// insert post meta
 							foreach($import_meta as $k => $v){
@@ -357,7 +441,9 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 									}
 								}
 							}
+							#$log .= $this->_get_time().': Post meta insert complete.'."\n";
 							$this->finalize_storage();
+							#$log .= $this->_get_time().': Post meta storage insert complete.'."\n";
 							$this->total_imported++;
 						} else {
 							if(is_object($post_id)){
@@ -365,6 +451,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 								$this->failed_imports++;
 							}
 						}
+						#$log .= $this->_get_time().': End of loop. Starting over.'."\n";
 						
 					} elseif($primary_table == 'users'){
 						$import_data = apply_filters('bmuci_user_import_data', $import_data, $row);
@@ -424,7 +511,14 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 						}
 					}
 					
+					#$log .= $this->_get_time().': Row Insertion complete.'."\n";
 					$imported_data[] = $row;
+					
+					update_option(BMUCI_OPT_PREFIX.'increment_last', $counter);
+					#$log .= $this->_get_time().': Last Increment value updated..'."\n";
+					
+					if($counter == 300) break;
+					if($this->end && $counter >= $this->end) break;
 					
 				} else {
 					$this->failed_imports++;
@@ -432,6 +526,10 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			}
 			
 			do_action('bmuci_after_import', $this);
+			
+			#$log .= $this->_get_time().': Import complete.'."\n";
+			
+			#$this->_update_cron_log($log);
 			
 			return $imported_data;
 		}
@@ -449,14 +547,12 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			if(!isset($this->storage[$post_id])){
 				$this->storage[$post_id] = array();
 			}
-			if(isset($this->storage[$post_id][$meta_key])){
-				if(is_array($this->storage[$post_id][$meta_key])){
+			if(!isset($this->storage[$post_id][$meta_key])){
+				$this->storage[$post_id][$meta_key] = array($meta_value);
+			} elseif($meta_key != $this->unique_key) {
+				if(in_array($meta_key, $this->serialized_keys)){
 					$this->storage[$post_id][$meta_key][] = $meta_value;
-				} else {
-					$this->storage[$post_id][$meta_key] = array($this->storage[$post_id][$meta_key], $meta_value);
 				}
-			} else {
-				$this->storage[$post_id][$meta_key] = $meta_value;
 			}
 		}
 		
@@ -468,12 +564,10 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		function finalize_storage(){
 			foreach($this->storage as $post_id => $meta){
 				foreach($meta as $key => $value){
-					if(is_array($value)){
-						$value = array_unique($value);
-						if(count($value) == 1){
-							$value = $value[0];
-						}
+					if(is_array($value) && count($value) == 1){
+						$value = $value[0];
 					}
+					
 					update_post_meta($post_id, $key, $value);
 				}
 			}
@@ -491,22 +585,21 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			
 			foreach($this->storage as $post_id => $meta){
 				foreach($meta as $key => $value){
-					if($key == $this->unique_key && $value == $match){
+					if($key == $this->unique_key && $value[0] == $match){
 						return $post_id;
 					}
 				}
 			}
 			
+			$args = array(
+				'posts_per_page' => 1,
+				'post_type' => $this->defaults['post_type']
+			);
 			if($meta){
-				$args = array(
-					'meta_key' => $this->unique_key,
-					'meta_value' => $match,
-					'post_type' => $this->defaults['post_type']
-				);
-			} else { //TODO: make this work for post fields...
-				$args = array(
-					'post_type' => $this->defaults['post_type']
-				);
+				$args['meta_key'] = $this->unique_key;
+				$args['meta_value'] = $match;
+			} else { // for post data matching
+				$args[$this->unique_key] = $match;
 			}
 			
 			$get_unique = new WP_Query($args);
