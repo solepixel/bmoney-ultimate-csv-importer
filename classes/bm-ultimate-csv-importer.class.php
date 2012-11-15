@@ -256,6 +256,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 						$cron_log .= 'Scheduling the cron again to complete the job.<br />';
 						wp_schedule_event(strtotime('now + 1 minute'), 'hourly', BMUCI_OPT_PREFIX.'scheduled_import');
 					} else {
+						update_option(BMUCI_OPT_PREFIX.'increment_last', NULL);
 						$cron_log .= 'Incremental import complete.<br />';
 						$this->increment = false;
 						wp_unschedule_event($scheduled_cron, BMUCI_OPT_PREFIX.'scheduled_import');
@@ -529,7 +530,6 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 					update_option(BMUCI_OPT_PREFIX.'increment_last', $counter);
 					#$log .= $this->_get_time().': Last Increment value updated..'."\n";
 					
-					if($counter == 300) break;
 					if($this->end && $counter >= $this->end) break;
 					
 				} else {
