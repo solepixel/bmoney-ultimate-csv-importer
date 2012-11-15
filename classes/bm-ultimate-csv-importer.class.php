@@ -274,6 +274,12 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			exit();
 		}
 		
+		/**
+		 * BM_Ultimate_CSV_Importer::_update_cron_log()
+		 * 
+		 * @param string $cron_log
+		 * @return void
+		 */
 		function _update_cron_log($cron_log=''){
 			update_option(BMUCI_OPT_PREFIX.'cron_log', $cron_log);
 		}
@@ -304,6 +310,12 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			return $val;
 		}
 		
+		/**
+		 * BM_Ultimate_CSV_Importer::_get_time()
+		 * 
+		 * @param bool $string
+		 * @return
+		 */
 		function _get_time($string=true){
 			if($string){
 				$time = microtime();
@@ -442,7 +454,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 								}
 							}
 							#$log .= $this->_get_time().': Post meta insert complete.'."\n";
-							$this->finalize_storage();
+							$this->finalize_storage($post_id);
 							#$log .= $this->_get_time().': Post meta storage insert complete.'."\n";
 							$this->total_imported++;
 						} else {
@@ -561,9 +573,11 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		 * 
 		 * @return void
 		 */
-		function finalize_storage(){
-			foreach($this->storage as $post_id => $meta){
-				foreach($meta as $key => $value){
+		function finalize_storage($post_id){
+			$data = isset($this->storage[$post_id]) ? $this->storage[$post_id] : array();
+			
+			if($data){
+				foreach($data as $key => $value){
 					if(is_array($value) && count($value) == 1){
 						$value = $value[0];
 					}
@@ -573,7 +587,13 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			}
 		}
 		
-		
+		/**
+		 * BM_Ultimate_CSV_Importer::get_unique()
+		 * 
+		 * @param mixed $import_data
+		 * @param mixed $import_meta
+		 * @return
+		 */
 		function get_unique($import_data, $import_meta){
 			$meta = false;
 			if(isset($import_data[$this->unique_key])){

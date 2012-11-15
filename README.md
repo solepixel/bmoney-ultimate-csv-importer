@@ -41,6 +41,9 @@ Filters:
 
 
 changelog:
+* 2.5
+	* Fixed a performance issue
+	* Added some documentation
 * 2.4
 	* Cleaned up some of the unique field code.
 	* Added support for incremental imports
