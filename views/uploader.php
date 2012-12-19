@@ -19,12 +19,16 @@
 			Post
 		</label> &nbsp;
 		<label>
-		<input type="radio" name="bmuci_import_type" value="users"<?php if($this->import_type == 'users') echo ' checked="checked"'; ?> />
+			<input type="radio" name="bmuci_import_type" value="users"<?php if($this->import_type == 'users') echo ' checked="checked"'; ?> />
 			User
 		</label> &nbsp;
 		<label class="disabled">
-		<input disabled="disabled" type="radio" name="bmuci_import_type" value="terms"<?php if($this->import_type == 'terms') echo ' checked="checked"'; ?> />
+			<input disabled="disabled" type="radio" name="bmuci_import_type" value="terms"<?php if($this->import_type == 'terms') echo ' checked="checked"'; ?> />
 			Taxonomy/Terms (coming soon)
+		</label>
+		<label>
+			<input type="radio" name="bmuci_import_type" value="other"<?php if($this->import_type == 'other') echo ' checked="checked"'; ?> />
+			Other (use this option for custom import scripts using hooks)
 		</label>
 	</p>
 	

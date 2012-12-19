@@ -74,6 +74,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				wp_register_style(BMUCI_OPT_PREFIX.'admin', BMUCI_DIR.'css/bmuci-admin.css', array(), BMUCI_VERSION);
 				//TODO import uploadify
 				wp_register_script(BMUCI_OPT_PREFIX.'admin', BMUCI_DIR.'js/bmuci-admin.js', array('jquery'), BMUCI_VERSION);
+				
+				register_importer('importer-bmuci', BMUCI_PI_NAME, BMUCI_PI_DESCRIPTION, array($this, 'register_importer_callback'));
 			}
 			
 			$this->customization_methods = apply_filters('bmuci_customization_methods', array(
@@ -93,7 +95,16 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		 * @return void
 		 */
 		function _admin_menu(){
-			add_submenu_page('tools.php','Ultimate CSV Importer', 'Ultimate CSV Importer', 8, $this->admin_page, array($this, 'importer'));
+			add_submenu_page('tools.php', BMUCI_PI_NAME, BMUCI_PI_NAME, 8, $this->admin_page, array($this, 'importer'));
+		}
+		
+		/**
+		 * BM_Ultimate_CSV_Importer::register_importer_callback()
+		 * 
+		 * @return void
+		 */
+		function register_importer_callback(){
+			wp_redirect(admin_url().'tools.php?page='.$this->admin_page);
 		}
 		
 		/**
@@ -111,19 +122,21 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 			
 			$this->last_import = isset($_POST['bmuci_last_import']) ? $_POST['bmuci_last_import'] : $this->last_import;
 			
-			$previous_matched = get_option(BMUCI_OPT_PREFIX.'matched');
+			$previous_matched = get_option(BMUCI_OPT_PREFIX.'matched', array());
 			$has_previous = ($previous_matched) ? true : false;
 			
 			if($this->last_import){
 				$this->setup_vars();
 				
 				$custom_columns = array();
-				foreach($previous_matched as $pm => $val){
-					if(is_array($val)){
-						$custom_columns['col'][] = $pm;
-						$custom_columns['method'][] = $val[0];
-						$custom_columns['value'][] = $val[1];
-						unset($previous_matched[$pm]);
+				if(is_array($previous_matched) && count($previous_matched) > 0){
+					foreach($previous_matched as $pm => $val){
+						if(is_array($val)){
+							$custom_columns['col'][] = $pm;
+							$custom_columns['method'][] = $val[0];
+							$custom_columns['value'][] = $val[1];
+							unset($previous_matched[$pm]);
+						}
 					}
 				}
 			} else {
@@ -136,14 +149,16 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				
 				$custom_columns = isset($_POST['custom_columns']) ? $_POST['custom_columns'] : array();
 				
-				$this->defaults = array(
-					'post_type' => isset($_POST['bmuci_post_type']) && $_POST['bmuci_post_type'] != '__custom__' ? $_POST['bmuci_post_type'] : (isset($_POST['bmuci_custom_post_type']) && $_POST['bmuci_custom_post_type'] ? $_POST['bmuci_custom_post_type'] : 'post'),
-					'post_status' => isset($_POST['bmuci_post_status']) ? $_POST['bmuci_post_status'] : 'publish',
-					'comment_status' => isset($_POST['bmuci_comment_status']) ? $_POST['bmuci_comment_status'] : 'open',
-					'ping_status' => isset($_POST['bmuci_ping_status']) ? $_POST['bmuci_ping_status'] : 'open',
-					'post_author' => isset($_POST['bmuci_post_author']) ? $_POST['bmuci_post_author'] : NULL,
-					'user_role' => isset($_POST['bmuci_user_role']) ? $_POST['bmuci_user_role'] : 'subscriber'
-				);
+				if($this->import_type != 'other'){
+					$this->defaults = array(
+						'post_type' => isset($_POST['bmuci_post_type']) && $_POST['bmuci_post_type'] != '__custom__' ? $_POST['bmuci_post_type'] : (isset($_POST['bmuci_custom_post_type']) && $_POST['bmuci_custom_post_type'] ? $_POST['bmuci_custom_post_type'] : 'post'),
+						'post_status' => isset($_POST['bmuci_post_status']) ? $_POST['bmuci_post_status'] : 'publish',
+						'comment_status' => isset($_POST['bmuci_comment_status']) ? $_POST['bmuci_comment_status'] : 'open',
+						'ping_status' => isset($_POST['bmuci_ping_status']) ? $_POST['bmuci_ping_status'] : 'open',
+						'post_author' => isset($_POST['bmuci_post_author']) ? $_POST['bmuci_post_author'] : NULL,
+						'user_role' => isset($_POST['bmuci_user_role']) ? $_POST['bmuci_user_role'] : 'subscriber'
+					);
+				}
 			}
 			
 			$schedule = isset($_POST['bmuci_schedule']) ? $_POST['bmuci_schedule'] : 'now';
@@ -175,6 +190,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 					$success_message = 'Your import has been successfully scheduled.';
 				}
 				
+				
+				if($matched === true) $matched = NULL;
 				
 				// store data for future imports
 				update_option(BMUCI_OPT_PREFIX.'import_type', $this->import_type);
@@ -369,23 +386,27 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				if($this->start && $counter < $this->start) continue;
 				
 				# start with all default values
-				foreach($this->defaults as $col => $default){
-					if(!isset($import_data[$col])){
-						$import_data[$col] = $default;
+				if(is_array($this->defaults) && count($this->defaults) > 0){
+					foreach($this->defaults as $col => $default){
+						if(!isset($import_data[$col])){
+							$import_data[$col] = $default;
+						}
 					}
 				}
 				
 				#$log .= $this->_get_time().': Building Columns.'."\n";
 				
 				# setup custom columns
-				foreach($columns as $ref => $val){
-					if(is_array($val) && $ref){
-						list($table, $column) = explode('.', $ref);
-						$value = $this->_build_value($val, $row, $columns);
-						if($table == 'posts' || $table == 'users'){
-							$import_data[$column] = trim($value);
-						} elseif($table == 'postmeta' || $table == 'usermeta'){
-							$import_meta[$column] = trim($value);
+				if(is_array($columns) && count($columns) > 0){
+					foreach($columns as $ref => $val){
+						if(is_array($val) && $ref){
+							list($table, $column) = explode('.', $ref);
+							$value = $this->_build_value($val, $row, $columns);
+							if($table == 'posts' || $table == 'users'){
+								$import_data[$column] = trim($value);
+							} elseif($table == 'postmeta' || $table == 'usermeta'){
+								$import_meta[$column] = trim($value);
+							}
 						}
 					}
 				}
@@ -394,7 +415,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				
 				# loop through each column to match with database
 				foreach($row as $key => $value){
-					if(in_array($key, $columns) && ($value || $value === '0')){
+					if(is_array($columns) && in_array($key, $columns) && ($value || $value === '0')){
 						$db_col = array_search($key, $columns);
 						if(strpos($db_col, '.') === false){
 							$db_col = $this->_add_table_to_column($db_col);
@@ -414,7 +435,7 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 						}
 					}
 				}
-					
+				
 				if(count($import_data) > 0){
 					#$log .= $this->_get_time().': Starting Insert.'."\n";
 					$user_role = $import_data['user_role']; // do this before any filters
@@ -532,6 +553,10 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 					if($counter == 300) break;
 					if($this->end && $counter >= $this->end) break;
 					
+				} elseif($this->import_type == 'other'){
+					# let's just let the user define what needs to happen shall we.
+					do_action('bmuci_custom_import', $this, $row);
+					$imported_data[] = $row;
 				} else {
 					$this->failed_imports++;
 				}
@@ -641,6 +666,8 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 		 */
 		function _match_columns($data, $custom_columns){
 			if(!count($data)) return false;
+			
+			if($this->import_type == 'other') return true;
 			
 			$db_cols = isset($_POST['db_field']) ? $_POST['db_field'] : array();
 			if(count($db_cols) > 0){
@@ -802,12 +829,15 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				$key = 'users';
 				$query = 'SHOW FULL FIELDS FROM `'.$wpdb->users.'`';
 			}
-			$results = $wpdb->get_results($query);
-			
-			foreach($results as $result){
-				$cols[$key.'.'.$result->Field] = $result->Field;
+			if($query){
+				$results = $wpdb->get_results($query);
+				
+				if(count($results)){
+					foreach($results as $result){
+						$cols[$key.'.'.$result->Field] = $result->Field;
+					}
+				}
 			}
-			
 			$this->_default_fields = $cols;
 			return $cols;
 		}
@@ -831,10 +861,13 @@ if(!class_exists('BM_Ultimate_CSV_Importer')){
 				$query = 'SELECT DISTINCT `meta_key` FROM `'.$wpdb->usermeta.'` ORDER BY `meta_key`';
 			}
 			
-			$results = $wpdb->get_results($query);
-			
-			foreach($results as $result){
-				$fields[$key.'.'.$result->meta_key] = $result->meta_key;
+			if($query){
+				$results = $wpdb->get_results($query);
+				if(count($results)){
+					foreach($results as $result){
+						$fields[$key.'.'.$result->meta_key] = $result->meta_key;
+					}
+				}
 			}
 			
 			// special custom fields

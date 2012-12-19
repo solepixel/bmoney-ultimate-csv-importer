@@ -12,6 +12,9 @@ Actions:
 	* var: (object) $this
 * bmuci_after_import - occurs at end of import
 	* var: (object) $this
+* bmuci_custom_import - allows custom scripting on row data
+	* var: (object) $this
+	* var: (array) $row
 
 Filters:
 
@@ -41,6 +44,9 @@ Filters:
 
 
 changelog:
+* 2.6
+	* Added action for custom import scripting
+	* Minor bug fixes/clean up.
 * 2.5
 	* Fixed a performance issue
 	* Added some documentation

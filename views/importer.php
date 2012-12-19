@@ -17,22 +17,22 @@
 	
 	
 	
-	
 	<?php if(isset($csv) && is_array($csv) && is_array($data)){ ?>
 		
 		<p style="font-weight: bold;"><?php echo $this->total_rows; ?> Total Rows found for import.</p>
 		
 		<form id="bmuci-match" method="post" action="<?php echo $_SERVER['REQUEST_URI']; ?>" >
 		
+			<?php if($this->import_type != 'other'){ ?>
 			
-			<?php require_once(BMUCI_PATH.'views/matcher.php'); ?>
-			
-			
-			<?php require_once(BMUCI_PATH.'views/custom-columns.php'); ?>
+				<?php require_once(BMUCI_PATH.'views/matcher.php'); ?>
+				
+				<?php require_once(BMUCI_PATH.'views/custom-columns.php'); ?>
+				
+			<?php } ?>
 			
 			
 			<?php require_once(BMUCI_PATH.'views/multisite.php'); ?>
-			
 			
 			<?php require_once(BMUCI_PATH.'views/scheduler.php'); ?>
 			
