@@ -44,6 +44,8 @@ Filters:
 
 
 changelog:
+* 2.61
+	* Fixed compatibility issue with register_importer
 * 2.6
 	* Added action for custom import scripting
 	* Minor bug fixes/clean up.
