@@ -24,28 +24,29 @@ Filters:
 	
 * bmuci_post_data - filters post $import_data before inserted into database
 	* filter var: (array) $import_data
-	* other var: (array) $row
+	* other var: (array) $row, (object) $this
+* bmuci_post_meta - filters post $import_data before inserted into database
+	* filter var: (array) $import_meta
+	* other var: (int) $post_id, (array) $row, (object) $this
 * bmuci_postmeta_value - filters post meta value $v before inserted/updated into database
 	* filter var: (string) $v
-	* other vars: (int) $post_id, (string) $k, (array) $row
+	* other vars: (int) $post_id, (string) $k, (array) $row, (object) $this
 	
 * bmuci_user_import_data - filters user import data prior to validation
 	* filter var: (array) $import_data
-	* other var: (array) $row
+	* other var: (array) $row, (object) $this
 * bmuci_insert_user - filters initial $new_user data before inserting into database (user_login, user_pass, user_email, role)
 	* filter var: (array) $new_user
-	* other vars: (array) $row
+	* other vars: (array) $row, (object) $this
 * bmuci_user_data - filters other user $import_data before inserting into database
 	* filter var: (array) $import_data
-	* other vars: (array) $row
+	* other vars: (array) $row, (object) $this
 * bmuci_usermeta_value - filters user meta $v before inserting/updating into database
 	* filter var: (string) $v
-	* other vars: (int) $user_id, (string) $k, (array) $row
+	* other vars: (int) $user_id, (string) $k, (array) $row, (object) $this
 
 
 changelog:
-* 2.61
-	* Fixed compatibility issue with register_importer
 * 2.6
 	* Added action for custom import scripting
 	* Minor bug fixes/clean up.
