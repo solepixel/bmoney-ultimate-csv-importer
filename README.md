@@ -1,6 +1,10 @@
 bmoney-ultimate-csv-importer
 =================
 
+<<<<<<< HEAD
+=======
+~Current Version:2.61~
+>>>>>>> 51ba784e3cef9bcb0ef6f3292d1d86c6e935fbe8
 
 Actions:
 
@@ -24,6 +28,7 @@ Filters:
 	
 * bmuci_post_data - filters post $import_data before inserted into database
 	* filter var: (array) $import_data
+<<<<<<< HEAD
 	* other var: (array) $row
 * bmuci_postmeta_value - filters post meta value $v before inserted/updated into database
 	* filter var: (string) $v
@@ -41,6 +46,28 @@ Filters:
 * bmuci_usermeta_value - filters user meta $v before inserting/updating into database
 	* filter var: (string) $v
 	* other vars: (int) $user_id, (string) $k, (array) $row
+=======
+	* other var: (array) $row, (object) $this
+* bmuci_post_meta - filters post $import_data before inserted into database
+	* filter var: (array) $import_meta
+	* other var: (int) $post_id, (array) $row, (object) $this
+* bmuci_postmeta_value - filters post meta value $v before inserted/updated into database
+	* filter var: (string) $v
+	* other vars: (int) $post_id, (string) $k, (array) $row, (object) $this
+	
+* bmuci_user_import_data - filters user import data prior to validation
+	* filter var: (array) $import_data
+	* other var: (array) $row, (object) $this
+* bmuci_insert_user - filters initial $new_user data before inserting into database (user_login, user_pass, user_email, role)
+	* filter var: (array) $new_user
+	* other vars: (array) $row, (object) $this
+* bmuci_user_data - filters other user $import_data before inserting into database
+	* filter var: (array) $import_data
+	* other vars: (array) $row, (object) $this
+* bmuci_usermeta_value - filters user meta $v before inserting/updating into database
+	* filter var: (string) $v
+	* other vars: (int) $user_id, (string) $k, (array) $row, (object) $this
+>>>>>>> 51ba784e3cef9bcb0ef6f3292d1d86c6e935fbe8
 
 
 changelog:
@@ -60,4 +87,11 @@ changelog:
 * 2.0
 	* Added support for users
 * 1.0
+<<<<<<< HEAD
 	* Initial build
+=======
+	* Initial build
+
+
+If you found this plugin useful, please feel free to send me a gittip! http://gittip.com/solepixel/
+>>>>>>> 51ba784e3cef9bcb0ef6f3292d1d86c6e935fbe8
