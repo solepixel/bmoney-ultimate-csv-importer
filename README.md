@@ -65,3 +65,7 @@ changelog:
 	* Added support for users
 * 1.0
 	* Initial build
+
+
+If you found this plugin useful, please feel free to send me a gittip! http://gittip.com/solepixel/
+<iframe style="border: 0; margin: 0; padding: 0;" src="https://www.gittip.com/solepixel/widget.html" width="48pt" height="22pt"></iframe>
