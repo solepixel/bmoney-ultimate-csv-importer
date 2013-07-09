@@ -1,7 +1,7 @@
 BMoney Ulimate CSV Importer
 =================
 
-~Current Version:2.7~
+~Current Version:2.7.1~
 
 Actions
 ===========
@@ -81,6 +81,9 @@ Filters
 
 Changelog
 ===========
+### 2.7.1
+* Fixed field name for scheduled imports
+
 ### 2.7
 * Adding Auto-updater
 * Adding taxonomies for posts
